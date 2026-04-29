@@ -80,7 +80,7 @@ DB            : Azure Cosmos DB（セッション履歴）
 
 ```bash
 # リポジトリをクローン
-git clone https://github.com/yourname/brain-surfless.git
+git clone https://github.com/akooimak15/brain-surfless.git
 cd brain-surfless
 
 # 依存関係をインストール
