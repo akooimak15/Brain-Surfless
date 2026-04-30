@@ -1,0 +1,9 @@
+.azurite/
+
+# Azure Functions local settings (secrets)
+azure/local.settings.json
+azure/local.settings.*.json
+
+# Azure Functions build artifacts
+azure/node_modules/
+azure/dist/
