@@ -7,7 +7,8 @@ export type Session = {
   startedAt: string;
   endedAt: string;
   focusDuration: number;
-  interrupted: boolean;
+  interrupted: number;
+  pointsEarned: number;
 };
 
 type ActiveSession = {
@@ -27,7 +28,7 @@ export function useSession() {
     setActive({ taskName, startedAt: new Date().toISOString() });
   };
 
-  const finishSession = (focusDuration: number, interrupted: boolean) => {
+  const finishSession = (focusDuration: number, interrupted: number) => {
     if (!active) {
       return null;
     }
@@ -40,6 +41,7 @@ export function useSession() {
       endedAt: new Date().toISOString(),
       focusDuration,
       interrupted,
+      pointsEarned: 0,
     };
     setActive(null);
     return session;

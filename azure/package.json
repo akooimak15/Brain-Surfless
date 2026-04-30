@@ -7,6 +7,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@azure/cosmos": "^4.5.0",
     "@azure/functions": "^4.6.0"
   },
   "devDependencies": {

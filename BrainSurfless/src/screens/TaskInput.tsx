@@ -9,34 +9,58 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import DonutSeekBar from '../components/DonutSeekBar';
+import { useTheme } from '../theme/ThemeContext';
 
 type Props = {
   onStart: (taskName: string, targetSeconds: number) => void;
 };
 
 const DEFAULT_MINUTES = '25';
+const MIN_MINUTES = 5;
+const MAX_MINUTES = 120;
+const STEP_MINUTES = 5;
 
 export default function TaskInput({ onStart }: Props) {
+  const { theme } = useTheme();
   const [taskName, setTaskName] = useState('');
   const [minutesText, setMinutesText] = useState(DEFAULT_MINUTES);
 
   const minutesValue = useMemo(() => Number(minutesText), [minutesText]);
+  const safeMinutes = useMemo(
+    () => (Number.isFinite(minutesValue) ? minutesValue : MIN_MINUTES),
+    [minutesValue],
+  );
+  const clampedMinutes = useMemo(
+    () =>
+      Math.min(Math.max(safeMinutes, MIN_MINUTES), MAX_MINUTES),
+    [safeMinutes],
+  );
+  const steppedMinutes = useMemo(
+    () => Math.round(clampedMinutes / STEP_MINUTES) * STEP_MINUTES,
+    [clampedMinutes],
+  );
   const isValid =
     taskName.trim().length > 0 &&
     Number.isFinite(minutesValue) &&
-    minutesValue > 0;
+    minutesValue >= MIN_MINUTES &&
+    minutesValue <= MAX_MINUTES;
 
   const handleStart = () => {
     if (!isValid) {
       return;
     }
-    const targetSeconds = Math.round(minutesValue * 60);
+    const targetSeconds = Math.round(steppedMinutes * 60);
     onStart(taskName.trim(), targetSeconds);
+  };
+
+  const handleMinutesBlur = () => {
+    setMinutesText(String(steppedMinutes));
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
@@ -44,33 +68,68 @@ export default function TaskInput({ onStart }: Props) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.hero}>
-          <Text style={styles.brand}>Brain Surfless</Text>
-          <Text style={styles.title}>伏せると、集中が進む。</Text>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.brand, { color: theme.colors.text }]}>Brain Surfless</Text>
+          <Text style={[styles.title, { color: theme.colors.text }]}>伏せると、集中が進む。</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.muted }]}>
             スマホを伏せた時間だけ、タイマーが進みます。
           </Text>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.label}>今日のタスク</Text>
+        <View style={[styles.card, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}> 
+          <Text style={[styles.label, { color: theme.colors.text }]}>今日のタスク</Text>
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              {
+                borderColor: theme.colors.border,
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+              },
+            ]}
             value={taskName}
             onChangeText={setTaskName}
             placeholder="例: 企画書の下書き"
-            placeholderTextColor="#A0A0A0"
+            placeholderTextColor={theme.colors.muted}
             autoCorrect={false}
           />
-          <Text style={styles.label}>集中時間（分）</Text>
-          <TextInput
-            style={styles.input}
-            value={minutesText}
-            onChangeText={setMinutesText}
-            placeholder="25"
-            placeholderTextColor="#A0A0A0"
-            keyboardType="numeric"
-          />
-          <Text style={styles.helper}>端末を伏せるとカウントが進みます。</Text>
+          <Text style={[styles.label, { color: theme.colors.text }]}>集中時間（分）</Text>
+          <View style={styles.seekWrap}>
+            <DonutSeekBar
+              value={steppedMinutes}
+              min={MIN_MINUTES}
+              max={MAX_MINUTES}
+              step={STEP_MINUTES}
+              label="Focus"
+              trackColor={theme.colors.track}
+              progressColor={theme.colors.primary}
+              labelColor={theme.colors.muted}
+              valueColor={theme.colors.text}
+              unitColor={theme.colors.muted}
+              onChange={nextValue => setMinutesText(String(nextValue))}
+            />
+          </View>
+          <View style={styles.minutesRow}>
+            <TextInput
+              style={[
+                styles.minutesInput,
+                {
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.surface,
+                  color: theme.colors.text,
+                },
+              ]}
+              value={minutesText}
+              onChangeText={setMinutesText}
+              onBlur={handleMinutesBlur}
+              placeholder="25"
+              placeholderTextColor={theme.colors.muted}
+              keyboardType="numeric"
+            />
+            <Text style={[styles.minutesSuffix, { color: theme.colors.muted }]}>分</Text>
+          </View>
+          <Text style={[styles.helper, { color: theme.colors.muted }]}>
+            {`端末を伏せるとカウントが進みます。${MIN_MINUTES}-${MAX_MINUTES}分`}
+          </Text>
         </View>
 
         <Pressable
@@ -78,11 +137,12 @@ export default function TaskInput({ onStart }: Props) {
           disabled={!isValid}
           style={({ pressed }) => [
             styles.primaryButton,
-            !isValid && styles.primaryButtonDisabled,
+            { backgroundColor: theme.colors.primary },
+            !isValid && { backgroundColor: theme.colors.border },
             pressed && isValid && styles.primaryButtonPressed,
           ]}
         >
-          <Text style={styles.primaryButtonText}>集中をはじめる</Text>
+          <Text style={[styles.primaryButtonText, { color: theme.colors.primaryText }]}>集中をはじめる</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -92,7 +152,6 @@ export default function TaskInput({ onStart }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F2',
   },
   content: {
     paddingHorizontal: 24,
@@ -105,30 +164,25 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 14,
     letterSpacing: 2.4,
-    color: '#111111',
     fontFamily: 'MPLUSRounded1c-Thin',
     textTransform: 'uppercase',
   },
   title: {
     fontSize: 30,
     fontWeight: '700',
-    color: '#111111',
     marginTop: 12,
     fontFamily: 'MPLUSRounded1c-Thin',
   },
   subtitle: {
     fontSize: 14,
-    color: '#4A4A4A',
     marginTop: 10,
     lineHeight: 20,
     fontFamily: 'MPLUSRounded1c-Thin',
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.78)',
     borderRadius: 12,
     padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
     shadowColor: '#000000',
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -139,28 +193,46 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#111111',
     fontFamily: 'MPLUSRounded1c-Thin',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D9D9D9',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginBottom: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    color: '#111111',
+    fontFamily: 'MPLUSRounded1c-Thin',
+  },
+  seekWrap: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  minutesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  minutesInput: {
+    minWidth: 80,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontFamily: 'MPLUSRounded1c-Thin',
+    textAlign: 'center',
+  },
+  minutesSuffix: {
+    marginLeft: 8,
+    fontSize: 14,
     fontFamily: 'MPLUSRounded1c-Thin',
   },
   helper: {
     fontSize: 12,
-    color: '#6A6A6A',
     fontFamily: 'MPLUSRounded1c-Thin',
   },
   primaryButton: {
     marginTop: 20,
-    backgroundColor: '#111111',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -170,14 +242,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
-  primaryButtonDisabled: {
-    backgroundColor: '#C8C8C8',
-  },
   primaryButtonPressed: {
     transform: [{ scale: 0.98 }],
   },
   primaryButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.6,
