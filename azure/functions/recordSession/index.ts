@@ -109,6 +109,15 @@ export async function recordSession(
     };
   } catch (error) {
     context.error('recordSession error:', error);
+
+    const cosmosCode = (error as any)?.code;
+    if (cosmosCode === 401) {
+      return {
+        status: 500,
+        jsonBody: { error: 'Cosmos unauthorized (check COSMOS_CONNECTION_STRING / AZURE_COSMOS_KEY)' },
+      };
+    }
+
     return { status: 500, jsonBody: { error: 'Internal server error' } };
   }
 }
