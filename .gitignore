@@ -7,3 +7,8 @@ azure/local.settings.*.json
 # Azure Functions build artifacts
 azure/node_modules/
 azure/dist/
+
+# Android signing (secrets)
+BrainSurfless/android/keystore.properties
+BrainSurfless/android/app/*.keystore
+BrainSurfless/android/app/*.jks

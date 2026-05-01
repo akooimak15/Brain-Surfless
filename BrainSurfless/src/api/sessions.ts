@@ -1,6 +1,7 @@
 import type { Session } from '../hooks/useSession';
+import { getApiBaseUrl } from '../config/apiBaseUrl';
 
-const API_BASE_URL = 'http://localhost:7071/api';
+const API_BASE_URL = getApiBaseUrl();
 
 export async function recordSession(session: Session) {
   const response = await fetch(`${API_BASE_URL}/sessions`, {

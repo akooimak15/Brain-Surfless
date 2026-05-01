@@ -86,20 +86,27 @@ export async function recordSession(
       return { status: 400, jsonBody: { message: 'focusDuration is invalid' } };
     }
 
+    if (body.id !== undefined && typeof body.id !== 'string') {
+      return { status: 400, jsonBody: { message: 'id is invalid' } };
+    }
+
     const session: Session = {
-      id: createId('session'),
+      id: body.id ?? createId('session'),
       userId: body.userId,
       taskName: body.taskName,
       startedAt: body.startedAt,
       endedAt: body.endedAt,
       focusDuration: body.focusDuration,
       interrupted: toInterruptedCount(body.interrupted),
-      pointsEarned: 0,
-      createdAt: new Date().toISOString(),
+      pointsEarned:
+        typeof body.pointsEarned === 'number' && Number.isFinite(body.pointsEarned)
+          ? body.pointsEarned
+          : 0,
+      createdAt: typeof body.createdAt === 'string' ? body.createdAt : new Date().toISOString(),
     };
 
     const container = getContainer();
-    await container.items.create(session);
+    await container.items.upsert(session);
 
     context.log('Record session', session.id);
 

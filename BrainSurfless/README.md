@@ -2,6 +2,131 @@ This is a new [**React Native**](https://reactnative.dev) project, bootstrapped 
 
 # Getting Started
 
+## 認証（ログイン）について
+
+現時点ではログイン機能は未実装です。セッションの `userId` はローカル固定値で動いていて、バックエンド（Azure Functions）も匿名アクセス前提です。
+
+## APK を作る（Android）
+
+### Debug APK（まずはこれでOK）
+
+```sh
+npm run android:apk:debug
+```
+
+生成物: `android/app/build/outputs/apk/debug/app-debug.apk`
+
+### Release APK（署名未設定なら debug 署名でビルドされます）
+
+```sh
+npm run android:apk:release
+```
+
+生成物: `android/app/build/outputs/apk/release/app-release.apk`
+
+### Play配布向け（AAB）
+
+```sh
+npm run android:aab:release
+```
+
+生成物: `android/app/build/outputs/bundle/release/app-release.aab`
+
+### リリース署名（任意）
+
+`android/keystore.properties` が存在する場合のみ release 署名が有効になります（git 追跡しない設定にしてあります）。
+
+例:
+
+```properties
+storeFile=app/my-release-key.keystore
+storePassword=********
+keyAlias=********
+keyPassword=********
+```
+
+## 注意: Functions の URL
+
+開発時は `src/config/apiBaseUrl.ts` で URL を解決しています。
+
+### Android 実機でローカルFunctionsに繋ぐ
+
+Azure Functions Core Tools は `localhost:7071` にバインドされるため、Android実機からはそのままだと到達できません。
+USB接続している場合は `adb reverse` が一番簡単です。
+
+```sh
+adb reverse tcp:7071 tcp:7071
+```
+
+（必要なら Metro 用に `adb reverse tcp:8081 tcp:8081` も）
+
+### Release（配布）ビルド
+
+Release で使う Functions URL は `src/config/apiBaseUrl.ts` の `PROD_API_BASE_URL` に設定してください。
+未設定の場合、アプリは起動しますが同期通信は失敗します。
+
+なお現在は「端末だけで完結するローカル版」を優先し、Releaseビルドではリモート同期（Functions呼び出し）をデフォルトでOFFにしています。
+同期を有効にしたい場合は `src/config/remoteSync.ts` を変更してください。
+
+## Web化（react-native-web）
+
+最低限のWebビルド（Vite）を追加しています。
+
+```sh
+npm run web
+```
+
+iOS Safari ではモーションセンサーの利用にユーザー操作が必要なため、`集中をはじめる` のタップ後に許可ダイアログが出ます。
+
+## Azure Static Web Apps へデプロイ（PWA公開）
+
+このリポジトリには、SWA 向けの GitHub Actions workflow を追加済みです。
+
+- Workflow: [/.github/workflows/azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml)
+- SWA設定: [web/public/staticwebapp.config.json](web/public/staticwebapp.config.json)
+
+### 1. Azure 側で Static Web App を作成
+
+1. Azure Portal で **Static Web Apps** を新規作成
+2. デプロイソースに GitHub を選択
+3. 対象リポジトリ: `Brain-Surfless`
+4. Build presets は Custom を選択（workflowを使うため）
+
+作成後、Azure から `AZURE_STATIC_WEB_APPS_API_TOKEN` を取得します。
+
+### 2. GitHub Secrets を設定
+
+GitHub リポジトリの Settings -> Secrets and variables -> Actions で以下を登録:
+
+- `AZURE_STATIC_WEB_APPS_API_TOKEN`: Azure で取得したデプロイトークン
+
+`GITHUB_TOKEN` は GitHub Actions 既定のトークンを利用するため追加不要です。
+
+### 3. デプロイ実行
+
+`main` ブランチへ push すると自動でデプロイされます。
+
+```sh
+git add .
+git commit -m "Add SWA deployment config for PWA"
+git push origin main
+```
+
+### 4. 確認項目（公開後）
+
+SWA の URL で以下を確認してください。
+
+- `/` が表示される（SPA ルーティングが壊れていない）
+- `/manifest.json` が 200 で返る
+- `/sw.js` が 200 で返る
+- DevTools の Application タブで Service Worker が有効
+
+### 補足
+
+- 現在の workflow は `BrainSurfless` 配下で `npm ci && npm run web:build` を実行し、`dist-web` を配信します。
+- `staticwebapp.config.json` は `web/public/` に置いてあるため、ビルド成果物に同梱されます。
+- `main` 以外の運用にしたい場合は [/.github/workflows/azure-static-web-apps.yml](../.github/workflows/azure-static-web-apps.yml) の `on.push.branches` を変更してください。
+
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
 ## Step 1: Start Metro

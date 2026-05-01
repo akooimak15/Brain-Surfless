@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import Complete from './src/screens/Complete';
 import FocusTimer from './src/screens/FocusTimer';
@@ -7,8 +7,9 @@ import Settings from './src/screens/Settings';
 import Stats from './src/screens/Stats';
 import TaskInput from './src/screens/TaskInput';
 import Tasks from './src/screens/Tasks';
-import { recordSession } from './src/api/sessions';
 import { Session, useSession } from './src/hooks/useSession';
+import { ensureMotionPermission } from './src/sensors/motionPermission';
+import { flushPendingSessions, syncSession } from './src/sync/sessionSync';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { appendSession } from './src/storage/sessions';
 
@@ -27,6 +28,10 @@ function AppContent() {
   const [lastSession, setLastSession] = useState<Session | null>(null);
   const { startSession, finishSession } = useSession();
   const { theme } = useTheme();
+
+  useEffect(() => {
+    flushPendingSessions().catch(() => undefined);
+  }, []);
 
   const tabItems = useMemo(
     () =>
@@ -48,15 +53,26 @@ function AppContent() {
     if (!pendingTask) {
       return;
     }
-    startSession(pendingTask.taskName);
-    setStage('timer');
+
+    void (async () => {
+      const granted = await ensureMotionPermission();
+      if (!granted) {
+        // Web/iOS で拒否された場合でも画面遷移はするが、センサーが取れないのでカウントは進まない。
+        // 余計なUI追加は避け、標準の alert のみに留める。
+        (globalThis as any)?.alert?.(
+          'モーション/加速度センサーの許可が必要です。ブラウザの設定で許可してから再度お試しください。',
+        );
+      }
+      startSession(pendingTask.taskName);
+      setStage('timer');
+    })();
   };
 
   const handleComplete = (focusSeconds: number, interrupted: number) => {
     const session = finishSession(focusSeconds, interrupted);
     if (session) {
       setLastSession(session);
-      recordSession(session).catch(() => undefined);
+      syncSession(session).catch(() => undefined);
       appendSession(session).catch(() => undefined);
     }
     setStage('complete');
@@ -66,7 +82,7 @@ function AppContent() {
     const session = finishSession(focusSeconds, interrupted);
     if (session) {
       setLastSession(session);
-      recordSession(session).catch(() => undefined);
+      syncSession(session).catch(() => undefined);
       appendSession(session).catch(() => undefined);
     }
     setStage('task');
