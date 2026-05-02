@@ -7,6 +7,8 @@
     "android:apk:debug": "cd android && ./gradlew assembleDebug",
     "android:apk:release": "cd android && ./gradlew assembleRelease",
     "android:aab:release": "cd android && ./gradlew bundleRelease",
+    "build": "npm run web:build",
+    "build:azure": "npm run web:build",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
